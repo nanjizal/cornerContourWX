@@ -4,7 +4,7 @@ package;
 import hx.widgets.*;
 import hx.widgets.styles.*;
 // need to add triangle antialiasing.
-import pixelDrawing;
+import pixelDrawing.Triangle;
 
 import cornerContour.drawTarget.PixelDraw;
 // contour code
