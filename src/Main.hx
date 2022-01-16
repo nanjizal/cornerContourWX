@@ -93,7 +93,7 @@ class Main {
     public function convertToPixels( image: Image ): Pixels {
         var pixels = new Pixels(image.width, image.height, false);
         // unsure on format
-        pixels.format = (format != null) ? format : PixelFormat.ARGB;
+        pixels.format = PixelFormat.ARGB;//(format != null) ? format : PixelFormat.ARGB;
         // No idea if this will work!!
         pixels.bytes = image.getData();
         return pixels;
