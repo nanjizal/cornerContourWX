@@ -69,9 +69,9 @@ class Main {
             pen2D = new Pen2D( 0x0000FF );
             
             firstRender( pen2D, pixels );
-            var p = image.getData();
+            var p = @:privateAccess myImage.imageRef.ptr.getData();
             for( i in 0...Std.int( image.width * image.height ) ){
-                p[ i ] = pixels.getByte( i );
+                p[ i ] = pixels.getByte( i ); // ???
             }
             
             
