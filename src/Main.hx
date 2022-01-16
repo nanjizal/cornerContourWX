@@ -7,6 +7,7 @@ import hx.widgets.styles.*;
 import pixelDrawing.Triangle;
 
 import cornerContour.drawTarget.PixelDraw;
+import cornerContour.color.ColorHelp;
 // contour code
 import cornerContour.Sketcher;
 import cornerContour.Pen2D;
@@ -17,6 +18,9 @@ import justPath.*;
 import justPath.transform.ScaleContext;
 import justPath.transform.ScaleTranslateContext;
 import justPath.transform.TranslationContext;
+import hxPixels.Pixels;
+
+import haxe.io.Bytes;
 
 /*
 Note: Images in buttons for ubuntu dont work until you run:
@@ -31,6 +35,8 @@ class Main {
         new Main();
     }
     var frame: Frame;
+    var app = new App();
+    var pen2D: Pen2D;
     public function new(){
         initApp();
         drawPanel();
@@ -40,7 +46,6 @@ class Main {
         app.exit();
     }
     public function initApp(){
-        var app = new App();
         app.init();
         frame = new Frame(null, "hxWidgets");
         frame.resize( 1024, 768 );
@@ -60,49 +65,54 @@ class Main {
             gc.antialiasMode = AntialiasMode.DEFAULT;
             gc.pen = new Pen( 0xFF0000, 3 );
             gc.brush = new Brush( 0x880000 );
-            // draw a rectangle to make sure I have pixels to get.
-            var image = createImage( 1024, 768 );
-            
-            
+            var image: hx.widgets.Image = createImage( 1024, 768 );
+            //trace( image );
+            /*
             var pixels = convertToPixels( image );
             // render
-            pen2D = new Pen2D( 0x0000FF );
-            
+            pen2D = new Pen2D( 0xFF0000FF );
             firstRender( pen2D, pixels );
-            var p = @:privateAccess myImage.imageRef.ptr.getData();
+            var p = @:privateAccess image.imageRef.ptr.getData();
+            */
+            /*
             for( i in 0...Std.int( image.width * image.height ) ){
                 p[ i ] = pixels.getByte( i ); // ???
             }
-            
-            
-            gc.drawImage( image );
-            
-            //gc.drawRoundedRectangle(10, 30, 100, 50, 10);
-            
-            //gc.pen = new Pen(0xFFFFFF, 3);
-            // gc.strokeLine(10, 120, 50, 160);
+            gc.drawBitmap( new Bitmap( image ) );
+            */
         });
     }
-    public function createImage( w: Int, h: Int ){
+    public function createImage( w: Int, h: Int ): hx.widgets.Image {
         var l = Std.int( w*h );
-        var bytes = Bytes.alloc( l << 2 );
-        var stream = hx.widgets.MemoryInputStream( bytes );
-        var image = new Image( stream );
+        var uint8Alpha: cpp.UInt8 = 0xFF;
+        var uint8Red: cpp.UInt8 = 0xFF0000;
+        var arr = new Array<cpp.UInt8>();
+        var i = 0;
+        while( i < l ){
+            arr.push( uint8Alpha );
+            arr.push( uint8Red );
+            i+=2;
+        }
+        var bytesData: haxe.io.BytesData = arr;
+        var bytes = Bytes.ofData( bytesData );
+        return new hx.widgets.Image( bytes, 1024, 768 );
     }
     
-    public var 
-
     public function convertToPixels( image: Image ): Pixels {
         var pixels = new Pixels(image.width, image.height, false);
         // unsure on format
         pixels.format = PixelFormat.ARGB;//(format != null) ? format : PixelFormat.ARGB;
         // No idea if this will work!!
-        var p = @:privateAccess myImage.imageRef.ptr.getData();
-        var a = @:privateAccess myImage.imageRef.ptr.getAlpha();
+        var p = @:privateAccess image.imageRef.ptr.getData();
+        var a = @:privateAccess image.imageRef.ptr.getAlpha();
         //
         var l = Std.int( image.width * image.height );
+        var rgb: Int;
+        var alpha: Int;
         for( i in 0...l ){
-            pixels.setInt32( p[i] );//???
+            rgb = p[i];
+            alpha = cast a[i];
+            pixels.setRawInt32( i, colorIntAlpha( rgb, alpha ) );
         }
         // pixels.bytes = image.getData();
         return pixels;
@@ -139,7 +149,7 @@ class Main {
     public function firstRender( pen2D: Pen2D, pixels: hxPixels.Pixels ){
         // render svg
         arcSVG();
-        view.pen2D.currentColor = 0xFF0000FF;
+        pen2D.currentColor = 0xFF0000FF;
         birdSVG();
         cubicSVG();
         quadSVG();
@@ -152,7 +162,7 @@ class Main {
      */
     public
     function birdSVG(){
-        var sketcher = view.createSketcher();
+        var sketcher = new Sketcher( pen2D, StyleSketch.Fine, StyleEndLine.no );
         sketcher.width = 2;
         var scaleTranslateContext = new ScaleTranslateContext( sketcher, 20, 0, 1, 1 );
         var p = new SvgPath( scaleTranslateContext );
@@ -163,7 +173,7 @@ class Main {
      */
     public
     function cubicSVG(){
-        var sketcher = view.createSketcher();
+        var sketcher = new Sketcher( pen2D, StyleSketch.Fine, StyleEndLine.no );
         sketcher.width = 10;
         // function to adjust color of curve along length
         sketcher.colourFunction = function( colour: Int, x: Float, y: Float, x_: Float, y_: Float ):  Int {
@@ -178,7 +188,7 @@ class Main {
      */
     public
     function quadSVG(){
-        var sketcher = view.createSketcher();
+        var sketcher = new Sketcher( pen2D, StyleSketch.Fine, StyleEndLine.no );
         sketcher.width = 1;
         // function to adjust width of curve along length
         sketcher.widthFunction = function( width: Float, x: Float, y: Float, x_: Float, y_: Float ): Float{
@@ -217,8 +227,8 @@ class Main {
     }
     // draws an svg ellipse
     function draw_d( d: String, x: Float, y: Float, s: Float, w: Float, color: Int ){
-        view.pen2D.currentColor = color;
-        var sketcher = view.createSketcher();
+        pen2D.currentColor = color;
+        var sketcher = new Sketcher( pen2D, StyleSketch.Fine, StyleEndLine.no );
         sketcher.width = w;
         var trans = new ScaleTranslateContext( sketcher, x, y, s, s );
         var p = new SvgPath( trans );

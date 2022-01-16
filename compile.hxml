@@ -1,0 +1,17 @@
+-lib hxWidgets
+-lib cornerContour
+-lib HxPixels
+-lib pixelDrawing
+-lib justPath
+-lib fracs
+
+-cp src/
+-main Main
+-cpp bin
+
+--macro include("hx.widgets")
+--macro include("wx.widgets")
+
+--next
+-cmd cd bin
+-cmd ./Main
