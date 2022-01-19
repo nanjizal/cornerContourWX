@@ -60,12 +60,9 @@ class Main {
         var rawPointerAlpha = @:privateAccess image.imageRef.ptr.getAlpha();
         var data: Pointer<cpp.UInt8> =  Pointer.fromRaw( rawPointerData );
         var alpha: Pointer<cpp.UInt8> =  Pointer.fromRaw( rawPointerAlpha );
-        if (rawPointerAlpha != null) {
-            alpha = Pointer.fromRaw(rawPointerAlpha);
-        }
         var j = 0;
         for( i in 0...width*height ){
-                if( alpha != null ) alpha[ i ]    = alphas[ i ];
+                if( alpha != null ) alpha[ i ] = alphas[ i ];
                 data[ j ]     = rgbs[ j ];
                 data[ j + 1 ] = rgbs[ j + 1 ];
                 data[ j + 2 ] = rgbs[ j + 2 ];
