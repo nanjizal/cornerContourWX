@@ -1,7 +1,5 @@
 -lib hxWidgets
--lib cornerContour
--lib HxPixels
--lib pixelDrawing
+-lib cornerContour	
 -lib justPath
 -lib fracs
 

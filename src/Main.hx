@@ -3,10 +3,6 @@ package;
 
 import hx.widgets.*;
 import hx.widgets.styles.*;
-// need to add triangle antialiasing.
-import pixelDrawing.Triangle;
-
-import cornerContour.drawTarget.PixelDraw;
 import cornerContour.color.ColorHelp;
 // contour code
 import cornerContour.Sketcher;
@@ -18,144 +14,70 @@ import justPath.*;
 import justPath.transform.ScaleContext;
 import justPath.transform.ScaleTranslateContext;
 import justPath.transform.TranslationContext;
-import hxPixels.Pixels;
-
+import cpp.Pointer;
+import cpp.RawPointer;
 import haxe.io.Bytes;
 
-/*
-Note: Images in buttons for ubuntu dont work until you run:
-gsettings set org.gnome.settings-daemon.plugins.xsettings overrides "{'Gtk/ButtonImages': <1>, 'Gtk/MenuImages': <1>}"
-*/
+
 class Main {
     
     var quadtest_d      = "M200,300 Q400,50 600,300 T1000,300";
     var cubictest_d     = "M100,200 C100,100 250,100 250,200S400,300 400,200";
     
-    public static function main() {
-        new Main();
-    }
-    var frame: Frame;
-    var app = new App();
     var pen2D: Pen2D;
+    
+    public static function main() {
+        var m = new Main();
+    }
     public function new(){
-        initApp();
-        drawPanel();
+        
+        var app = new App();
+        app.init();
+        var frame = new Frame( null, "hxWidgets" );
+        var width = 1024;
+        var height = 768;
+        var l = Std.int( width*height);
+        frame.resize(width,height);
+        var panel = new Panel( frame );
+        var image = new hx.widgets.Image(width,height );
+        pen2D = new Pen2D( 0xFF0000FF );
+        pen2D.currentColor = 0xFF0000FF;
+        arcSVG();
+        pen2D.currentColor = 0xFF0F00FF;
+        birdSVG();
+        cubicSVG();
+        quadSVG();
+        var rgbs = new haxe.io.UInt8Array( l*3 );
+        var alphas = new haxe.io.UInt8Array( l*3 );
+        var penData = pen2D.arr;
+        var totalTriangles = Std.int( penData.size/7 );
+        for( i in 0...totalTriangles ){
+            pen2D.pos = i;
+            penData.fillaRGBs( rgbs, alphas, width );
+        }
+        // transfer to Image
+        var rawPointerData  = @:privateAccess image.imageRef.ptr.getData();
+        var rawPointerAlpha = @:privateAccess image.imageRef.ptr.getAlpha();
+        var data: Pointer<cpp.UInt8> =  Pointer.fromRaw( rawPointerData );
+        var alpha: Pointer<cpp.UInt8> =  Pointer.fromRaw( rawPointerAlpha );
+        if (rawPointerAlpha != null) {
+            alpha = Pointer.fromRaw(rawPointerAlpha);
+        }
+        var j = 0;
+        for( i in 0...width*height ){
+                if( alpha != null ) alpha[ i ]    = alphas[ i ];
+                data[ j ]     = rgbs[ j ];
+                data[ j + 1 ] = rgbs[ j + 1 ];
+                data[ j + 2 ] = rgbs[ j + 2 ];
+                j+=3;
+        }
+        var b = new Bitmap(image);
+        var bmp:StaticBitmap = new StaticBitmap(frame, b);
         frame.layout();
         frame.show();
         app.run();
         app.exit();
     }
-    public function initApp(){
-        app.init();
-        frame = new Frame(null, "hxWidgets");
-        frame.resize( 1024, 768 );
-    }
-    public function drawPanel(){
-        var panel = new Panel( frame );
-        panel.bind(EventType.PAINT, function(e) {
-            var dc:PaintDC = new PaintDC(panel);
-            dc.background = StockBrushes.BRUSH_BLACK;
-            dc.clear();
-            
-            var gc: GraphicsContext = new GraphicsContext( panel );
-            // normal anti alias
-            // gc.setFont(panel.font, 0xFFFFFF);
-            // gc.drawText("AntialiasMode.DEFAULT", 10, 10);
-            
-            gc.antialiasMode = AntialiasMode.DEFAULT;
-            gc.pen = new Pen( 0xFF0000, 3 );
-            gc.brush = new Brush( 0x880000 );
-            var image: hx.widgets.Image = createImage( 1024, 768 );
-            //trace( image );
-            /*
-            var pixels = convertToPixels( image );
-            // render
-            pen2D = new Pen2D( 0xFF0000FF );
-            firstRender( pen2D, pixels );
-            var p = @:privateAccess image.imageRef.ptr.getData();
-            */
-            /*
-            for( i in 0...Std.int( image.width * image.height ) ){
-                p[ i ] = pixels.getByte( i ); // ???
-            }
-            gc.drawBitmap( new Bitmap( image ) );
-            */
-        });
-    }
-    public function createImage( w: Int, h: Int ): hx.widgets.Image {
-        var l = Std.int( w*h );
-        var uint8Alpha: cpp.UInt8 = 0xFF;
-        var uint8Red: cpp.UInt8 = 0xFF0000;
-        var arr = new Array<cpp.UInt8>();
-        var i = 0;
-        while( i < l ){
-            arr.push( uint8Alpha );
-            arr.push( uint8Red );
-            i+=2;
-        }
-        var bytesData: haxe.io.BytesData = arr;
-        var bytes = Bytes.ofData( bytesData );
-        return new hx.widgets.Image( bytes, 1024, 768 );
-    }
-    
-    public function convertToPixels( image: Image ): Pixels {
-        var pixels = new Pixels(image.width, image.height, false);
-        // unsure on format
-        pixels.format = PixelFormat.ARGB;//(format != null) ? format : PixelFormat.ARGB;
-        // No idea if this will work!!
-        var p = @:privateAccess image.imageRef.ptr.getData();
-        var a = @:privateAccess image.imageRef.ptr.getAlpha();
-        //
-        var l = Std.int( image.width * image.height );
-        var rgb: Int;
-        var alpha: Int;
-        for( i in 0...l ){
-            rgb = p[i];
-            alpha = cast a[i];
-            pixels.setRawInt32( i, colorIntAlpha( rgb, alpha ) );
-        }
-        // pixels.bytes = image.getData();
-        return pixels;
-    }
-    
-    /* 
-    
-    // can now do
-    // import cornerContour.drawTarget.pixelDraw;
-    // rearrangeDrawData( pen, pixels );
-    public function fillTriangle( p: hxPixels.Pixels, points: Array<Float>, color: Int, alpha: Float ){
-        var t = new pixelDrawing.Triangle( p, points );
-        t.fill( color, alpha );
-    }
-    // Todo haxe.io.UInt8Array ?
-    public function getPixels( img: Image ): Array<UInt8> {
-        var len = Std.int( image.width * image.height );
-        var arr: Array<UInt8> = new Array<Uint8>( len ) ;
-        cpp.NativeArray. setUnmanagedData<UInt8>( arr, image.getData(),  len );
-    }
-    public function setPixels( img: Image, pixels: Array<UInt8> ){
-        var len = Std.int( image.width * image.height );
-        var p = img.getData();
-        for (i in 0...w * h) {
-            p[i] = pixels[i];
-        }
-    }
-    
-    */
-    
-    
-    /// CornerContour stuff...
-    
-    public function firstRender( pen2D: Pen2D, pixels: hxPixels.Pixels ){
-        // render svg
-        arcSVG();
-        pen2D.currentColor = 0xFF0000FF;
-        birdSVG();
-        cubicSVG();
-        quadSVG();
-        rearrageDrawData( pen2D, pixels );
-    }
-    
     
     /**
      * draws Kiwi svg
@@ -163,7 +85,7 @@ class Main {
     public
     function birdSVG(){
         var sketcher = new Sketcher( pen2D, StyleSketch.Fine, StyleEndLine.no );
-        sketcher.width = 2;
+        sketcher.width = 5;
         var scaleTranslateContext = new ScaleTranslateContext( sketcher, 20, 0, 1, 1 );
         var p = new SvgPath( scaleTranslateContext );
         p.parse( bird_d );
@@ -174,7 +96,7 @@ class Main {
     public
     function cubicSVG(){
         var sketcher = new Sketcher( pen2D, StyleSketch.Fine, StyleEndLine.no );
-        sketcher.width = 10;
+        sketcher.width = 5;
         // function to adjust color of curve along length
         sketcher.colourFunction = function( colour: Int, x: Float, y: Float, x_: Float, y_: Float ):  Int {
             return Std.int( colour-1*x*y );
@@ -189,7 +111,7 @@ class Main {
     public
     function quadSVG(){
         var sketcher = new Sketcher( pen2D, StyleSketch.Fine, StyleEndLine.no );
-        sketcher.width = 1;
+        sketcher.width = 5;
         // function to adjust width of curve along length
         sketcher.widthFunction = function( width: Float, x: Float, y: Float, x_: Float, y_: Float ): Float{
             return width+0.008*2;
