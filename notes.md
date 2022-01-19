@@ -34,3 +34,5 @@ image.imageData.setRGB(10, 0, 255, 0, 0);
 
 nanjizal:
 export PATH=${PATH}:/usr/local/Cellar/wxwidgets/wxWidgets/bin
+
+https://therealmjp.github.io/posts/msaa-overview/
